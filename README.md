@@ -1,4 +1,5 @@
 # Diary Schedule Assistant
+<img width="956" height="503" alt="화면 캡처 2026-02-16 220240" src="https://github.com/user-attachments/assets/27167360-929a-4b56-a8d8-6c27b88b1670" />
 
 자연어로 일정을 입력하면 저장/알림/공부계획 자동 생성까지 해주는 로컬 AI 일정 비서입니다.  
 CLI와 GUI를 모두 지원합니다.
