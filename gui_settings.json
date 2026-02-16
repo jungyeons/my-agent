@@ -1,4 +1,10 @@
 {
   "theme": "princess",
-  "illustration_path": "assets\\user_illustration.png"
+  "illustration_path": "assets\\user_illustration.png",
+  "_loaded_path": "assets\\user_illustration.png",
+  "illust_scale": "209",
+  "illust_offset_x": "0",
+  "illust_offset_y": "-13",
+  "illust_w": "260",
+  "illust_h": "96"
 }

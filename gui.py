@@ -168,6 +168,7 @@ class AssistantGUI:
         self.illust_offset_y = tk.IntVar(value=int(self.settings.get("illust_offset_y", "0")))
         self.illust_w = tk.IntVar(value=int(self.settings.get("illust_w", "260")))
         self.illust_h = tk.IntVar(value=int(self.settings.get("illust_h", "96")))
+        self.illust_controls_visible = False
 
         self._build_ui()
         self._apply_theme(self.current_theme.get())
@@ -223,9 +224,18 @@ class AssistantGUI:
 
         self.illustration = tk.Canvas(header, width=260, height=96, highlightthickness=0, relief="flat")
         self.illustration.grid(row=0, column=2, rowspan=3, padx=(6, 0), sticky="e")
-        ttk.Button(header, text="Use My Image", style="App.TButton", command=self.on_pick_illustration).grid(
-            row=3, column=2, sticky="e", pady=(6, 0), padx=(0, 2)
+        img_btn_bar = ttk.Frame(header, style="Root.TFrame")
+        img_btn_bar.grid(row=3, column=2, sticky="e", pady=(6, 0))
+        ttk.Button(img_btn_bar, text="Use My Image", style="App.TButton", command=self.on_pick_illustration).grid(
+            row=0, column=0, padx=(0, 6)
         )
+        self.edit_image_btn = ttk.Button(
+            img_btn_bar,
+            text="Edit Image",
+            style="App.TButton",
+            command=self.toggle_illustration_controls,
+        )
+        self.edit_image_btn.grid(row=0, column=1)
         self._build_illustration_controls(header)
 
         self.chat = tk.Text(
@@ -355,7 +365,7 @@ class AssistantGUI:
 
     def _build_illustration_controls(self, header: ttk.Frame) -> None:
         ctrl = ttk.LabelFrame(header, text="Image Layout", padding=6, style="App.TLabelframe")
-        ctrl.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(6, 0))
+        self.illust_ctrl = ctrl
         ctrl.columnconfigure(1, weight=1)
 
         ttk.Label(ctrl, text="Scale %", style="Sub.TLabel").grid(row=0, column=0, sticky="w")
@@ -395,7 +405,22 @@ class AssistantGUI:
         ttk.Label(size_row, text="H", style="Sub.TLabel").grid(row=0, column=2, sticky="w")
         ttk.Spinbox(size_row, from_=80, to=240, textvariable=self.illust_h, width=6).grid(row=0, column=3, padx=(6, 10))
         ttk.Button(size_row, text="Apply Size", style="App.TButton", command=self.on_apply_illust_size).grid(row=0, column=4, padx=(0, 8))
-        ttk.Button(size_row, text="Reset Image", style="App.TButton", command=self.on_reset_illust_transform).grid(row=0, column=5)
+        ttk.Button(size_row, text="Reset Image", style="App.TButton", command=self.on_reset_illust_transform).grid(row=0, column=5, padx=(0, 8))
+        ttk.Button(size_row, text="Done", style="App.TButton", command=lambda: self.set_illustration_controls(False)).grid(
+            row=0, column=6
+        )
+
+    def set_illustration_controls(self, show: bool) -> None:
+        self.illust_controls_visible = show
+        if show:
+            self.illust_ctrl.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(6, 0))
+            self.edit_image_btn.configure(text="Hide Edit")
+        else:
+            self.illust_ctrl.grid_remove()
+            self.edit_image_btn.configure(text="Edit Image")
+
+    def toggle_illustration_controls(self) -> None:
+        self.set_illustration_controls(not self.illust_controls_visible)
 
     def _apply_theme(self, theme_name: str) -> None:
         palette = THEMES.get(theme_name, THEMES["princess"])
@@ -601,6 +626,7 @@ class AssistantGUI:
         self.settings["illust_h"] = str(self.illust_h.get())
         save_gui_settings(self.settings)
         self._render_illustration(THEMES.get(self.current_theme.get(), THEMES["princess"]))
+        self.set_illustration_controls(False)
 
     def on_reset_illust_transform(self) -> None:
         self.illust_scale.set(100)
