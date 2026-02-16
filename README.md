@@ -31,6 +31,20 @@ python assistant.py run
 python assistant.py chat
 ```
 
+## Desktop GUI mode
+
+```powershell
+python gui.py
+```
+
+GUI features:
+- chat-like input
+- auto memory apply/save/load/reset
+- event tabs: all events / today / week calendar
+- reset clears memory + chat + all events (with confirmation)
+- event table + delete selected (all/today tab)
+- notifier start/stop button
+
 Chat examples:
 - `20일 9시 면접, 1시 시험`
 - `영어 공부계획 10일, 하루 3시간`
@@ -92,4 +106,5 @@ Notes:
 python assistant.py notify-test
 python assistant.py remove 1
 python assistant.py list
+python gui.py
 ```
