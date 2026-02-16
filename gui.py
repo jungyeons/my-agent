@@ -214,13 +214,27 @@ class AssistantGUI:
         theme_bar = ttk.Frame(header, style="Root.TFrame")
         theme_bar.grid(row=2, column=0, columnspan=2, pady=(8, 0), sticky="w")
         ttk.Label(theme_bar, text="Theme", style="Sub.TLabel").grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(theme_bar, text="Princess", style="App.TButton", command=lambda: self._set_theme("princess")).grid(
-            row=0, column=1, padx=2
-        )
-        ttk.Button(theme_bar, text="Mint", style="App.TButton", command=lambda: self._set_theme("mint")).grid(row=0, column=2, padx=2)
-        ttk.Button(theme_bar, text="Simple", style="App.TButton", command=lambda: self._set_theme("simple")).grid(
-            row=0, column=3, padx=2
-        )
+        ttk.Button(
+            theme_bar,
+            text="Princess",
+            width=8,
+            style="Theme.TButton",
+            command=lambda: self._set_theme("princess"),
+        ).grid(row=0, column=1, padx=2)
+        ttk.Button(
+            theme_bar,
+            text="Mint",
+            width=8,
+            style="Theme.TButton",
+            command=lambda: self._set_theme("mint"),
+        ).grid(row=0, column=2, padx=2)
+        ttk.Button(
+            theme_bar,
+            text="Simple",
+            width=8,
+            style="Theme.TButton",
+            command=lambda: self._set_theme("simple"),
+        ).grid(row=0, column=3, padx=2)
 
         self.illustration = tk.Canvas(header, width=260, height=96, highlightthickness=0, relief="flat")
         self.illustration.grid(row=0, column=2, rowspan=3, padx=(6, 0), sticky="e")
@@ -446,6 +460,21 @@ class AssistantGUI:
             borderwidth=0,
         )
         self.style.map("App.TButton", background=[("active", palette["button_active"]), ("pressed", palette["button_active"])])
+
+        self.style.configure(
+            "Theme.TButton",
+            background=palette["button_bg"],
+            foreground=palette["text"],
+            bordercolor=palette["accent_dark"],
+            padding=(6, 5),
+            font=(self.ui_font, 10, "bold"),
+            relief="flat",
+            borderwidth=0,
+        )
+        self.style.map(
+            "Theme.TButton",
+            background=[("active", palette["button_active"]), ("pressed", palette["button_active"])],
+        )
 
         self.style.configure(
             "Tab.TButton",
