@@ -41,6 +41,9 @@ GUI features:
 - chat-like input
 - auto memory apply/save/load/reset
 - event tabs: all events / today / week calendar
+- weekday stickers in week calendar (weekday flower, weekend hearts)
+- priority color tags (exam/interview/study)
+- theme buttons (Princess / Mint / Simple)
 - reset clears memory + chat + all events (with confirmation)
 - event table + delete selected (all/today tab)
 - notifier start/stop button
