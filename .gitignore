@@ -1,0 +1,6 @@
+# Runtime artifacts
+__pycache__/
+*.pyc
+schedule.db
+chat_memory.json
+.venv/
