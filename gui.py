@@ -27,6 +27,7 @@ from assistant import (
     init_db,
     list_events,
     load_chat_memory,
+    parse_days_left_query,
     remove_event,
     save_chat_memory,
     send_notification,
@@ -313,28 +314,32 @@ class AssistantGUI:
             frame.rowconfigure(0, weight=1)
             frame.columnconfigure(0, weight=1)
 
-        self.tree_all = ttk.Treeview(tab_all, columns=("id", "time", "title", "state"), show="headings", style="App.Treeview")
+        self.tree_all = ttk.Treeview(tab_all, columns=("id", "time", "title", "dday", "state"), show="headings", style="App.Treeview")
         self.tree_all.heading("id", text="ID")
         self.tree_all.heading("time", text="Time")
         self.tree_all.heading("title", text="Title")
+        self.tree_all.heading("dday", text="D-day")
         self.tree_all.heading("state", text="State")
         self.tree_all.column("id", width=50, anchor="center")
         self.tree_all.column("time", width=124, anchor="center")
-        self.tree_all.column("title", width=230, anchor="w")
+        self.tree_all.column("title", width=190, anchor="w")
+        self.tree_all.column("dday", width=62, anchor="center")
         self.tree_all.column("state", width=66, anchor="center")
         self.tree_all.grid(row=0, column=0, sticky="nsew")
         all_x = ttk.Scrollbar(tab_all, orient="horizontal", command=self.tree_all.xview)
         self.tree_all.configure(xscrollcommand=all_x.set)
         all_x.grid(row=1, column=0, sticky="ew")
 
-        self.tree_today = ttk.Treeview(tab_today, columns=("id", "time", "title", "state"), show="headings", style="App.Treeview")
+        self.tree_today = ttk.Treeview(tab_today, columns=("id", "time", "title", "dday", "state"), show="headings", style="App.Treeview")
         self.tree_today.heading("id", text="ID")
         self.tree_today.heading("time", text="Time")
         self.tree_today.heading("title", text="Title")
+        self.tree_today.heading("dday", text="D-day")
         self.tree_today.heading("state", text="State")
         self.tree_today.column("id", width=50, anchor="center")
         self.tree_today.column("time", width=80, anchor="center")
-        self.tree_today.column("title", width=264, anchor="w")
+        self.tree_today.column("title", width=220, anchor="w")
+        self.tree_today.column("dday", width=70, anchor="center")
         self.tree_today.column("state", width=70, anchor="center")
         self.tree_today.grid(row=0, column=0, sticky="nsew")
         today_x = ttk.Scrollbar(tab_today, orient="horizontal", command=self.tree_today.xview)
@@ -709,6 +714,16 @@ class AssistantGUI:
             return "\u2665"  # Sun
         return "\u273F"  # Weekday
 
+    @staticmethod
+    def _dday_label(target: date, today: date | None = None) -> str:
+        today = today or datetime.now().date()
+        diff = (target - today).days
+        if diff > 0:
+            return f"D-{diff}"
+        if diff == 0:
+            return "D-Day"
+        return f"D+{abs(diff)}"
+
     def _append(self, who: str, text: str) -> None:
         self.chat.configure(state="normal")
         tag = "assistant" if who == "assistant" else "you"
@@ -735,6 +750,14 @@ class AssistantGUI:
         enriched = apply_chat_memory(user_input, self.memory)
         if enriched != user_input:
             self._append_assistant(f"(using memory) {enriched}")
+
+        days_left_reply = parse_days_left_query(enriched)
+        if days_left_reply is not None:
+            self._append_assistant(days_left_reply)
+            update_chat_memory(self.memory, enriched)
+            save_chat_memory(self.memory)
+            self.memory_label.configure(text=format_chat_memory(self.memory))
+            return
 
         kind, events = handle_ask(enriched)
         if not events:
@@ -769,17 +792,18 @@ class AssistantGUI:
             dt = datetime.fromisoformat(event_time)
             state = "notified" if notified else "pending"
             prio = self._priority_for_title(title)
+            dday = self._dday_label(dt.date(), today=today)
             self.tree_all.insert(
                 "",
                 "end",
-                values=(event_id, dt.strftime("%Y-%m-%d %H:%M"), title, state),
+                values=(event_id, dt.strftime("%Y-%m-%d %H:%M"), title, dday, state),
                 tags=(f"prio_{prio}",),
             )
             if dt.date() == today:
                 self.tree_today.insert(
                     "",
                     "end",
-                    values=(event_id, dt.strftime("%H:%M"), title, state),
+                    values=(event_id, dt.strftime("%H:%M"), title, dday, state),
                     tags=(f"prio_{prio}",),
                 )
             if dt.date() in by_day:

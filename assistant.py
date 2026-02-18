@@ -45,6 +45,9 @@ K_COUNTDOWN = "\uC5ED\uC0B0"
 K_SUBJECT = "\uACFC\uBAA9"
 K_UNTIL = "\uAE4C\uC9C0"
 K_PER_DAY = "\uD558\uB8E8"
+K_HOW_MANY_DAYS = "\uBA70\uCE60"
+K_REMAIN = "\uB0A8"
+K_DDAY = "d-day"
 
 
 @dataclass
@@ -244,10 +247,38 @@ def insert_events(events: list[ParsedEvent], db_path: Path = DB_PATH) -> list[Pa
     conn = sqlite3.connect(db_path)
     try:
         for ev in events:
-            conn.execute(
-                "INSERT INTO events (title, event_time, notified) VALUES (?, ?, 0)",
-                (ev.title, ev.when.isoformat()),
-            )
+            day_key = ev.when.strftime("%Y-%m-%d")
+            rows = conn.execute(
+                """
+                SELECT id, title
+                FROM events
+                WHERE substr(event_time, 1, 10) = ?
+                ORDER BY id ASC
+                """,
+                (day_key,),
+            ).fetchall()
+
+            def title_key(text: str) -> str:
+                # Normalize for "same schedule" matching regardless of spacing/punctuation.
+                key = text.strip().lower()
+                key = re.sub(r"[\s\-\_\.\,\!\?\'\"\(\)\[\]\{\}]+", "", key)
+                return key
+
+            matching_ids = [row_id for row_id, title in rows if title_key(title) == title_key(ev.title)]
+
+            if matching_ids:
+                primary_id = matching_ids[0]
+                conn.execute(
+                    "UPDATE events SET title = ?, event_time = ?, notified = 0 WHERE id = ?",
+                    (ev.title, ev.when.isoformat(), primary_id),
+                )
+                for duplicate_id in matching_ids[1:]:
+                    conn.execute("DELETE FROM events WHERE id = ?", (duplicate_id,))
+            else:
+                conn.execute(
+                    "INSERT INTO events (title, event_time, notified) VALUES (?, ?, 0)",
+                    (ev.title, ev.when.isoformat()),
+                )
         conn.commit()
     finally:
         conn.close()
@@ -256,6 +287,64 @@ def insert_events(events: list[ParsedEvent], db_path: Path = DB_PATH) -> list[Pa
 
 def add_events_from_text(text: str, db_path: Path = DB_PATH) -> list[ParsedEvent]:
     return insert_events(parse_events_korean(text), db_path=db_path)
+
+
+def create_date_only_event(text: str, now: datetime | None = None) -> ParsedEvent | None:
+    now = now or datetime.now()
+    target = parse_generic_date(text, now)
+    if target is None:
+        return None
+
+    cleaned = text
+    cleaned = re.sub(r"\d{4}[-\.\/]\d{1,2}[-\.\/]\d{1,2}", "", cleaned)
+    cleaned = re.sub(rf"\d{{1,2}}\s*{K_MONTH}\s*\d{{1,2}}\s*{K_DAY}", "", cleaned)
+    cleaned = re.sub(rf"\d{{1,2}}\s*{K_DAY}", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.")
+    title = normalize_title(cleaned) if cleaned else K_DEFAULT_TITLE
+
+    when = target.replace(hour=9, minute=0, second=0, microsecond=0)
+    return ParsedEvent(when=when, title=title)
+
+
+def create_events_with_explicit_month_date(text: str, now: datetime | None = None) -> list[ParsedEvent]:
+    now = now or datetime.now()
+    base = parse_generic_date(text, now)
+    if base is None:
+        return []
+
+    time_re = re.compile(
+        rf"(?:(?P<ampm>{K_AM}|{K_PM})\s*)?(?P<hour>\d{{1,2}})\s*{K_HOUR}(?:\s*(?P<minute>\d{{1,2}})\s*{K_MIN})?"
+    )
+
+    body = text
+    body = re.sub(r"\d{4}[-\.\/]\d{1,2}[-\.\/]\d{1,2}", "", body)
+    body = re.sub(rf"\d{{1,2}}\s*{K_MONTH}\s*\d{{1,2}}\s*{K_DAY}", "", body)
+    body = body.strip(" ,.")
+
+    matches = list(time_re.finditer(body))
+    events: list[ParsedEvent] = []
+
+    if not matches:
+        title = normalize_title(body) if body else K_DEFAULT_TITLE
+        when = base.replace(hour=9, minute=0, second=0, microsecond=0)
+        return [ParsedEvent(when=when, title=title)]
+
+    for idx, m in enumerate(matches):
+        ampm = m.group("ampm")
+        hour = int(m.group("hour"))
+        minute = int(m.group("minute") or 0)
+        if ampm == K_PM and hour < 12:
+            hour += 12
+        if ampm == K_AM and hour == 12:
+            hour = 0
+
+        title_start = m.end()
+        title_end = matches[idx + 1].start() if idx + 1 < len(matches) else len(body)
+        title = normalize_title(body[title_start:title_end])
+        when = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        events.append(ParsedEvent(when=when, title=title))
+
+    return events
 
 
 def extract_study_goal(text: str) -> str:
@@ -327,6 +416,41 @@ def parse_exam_date(text: str, now: datetime) -> datetime | None:
     if d_match and (K_EXAM in text or K_CODING_TEST in text):
         return infer_date(now, int(d_match.group("d")))
     return None
+
+
+def parse_generic_date(text: str, now: datetime) -> datetime | None:
+    iso_match = re.search(r"(?P<y>\d{4})[-\.\/](?P<m>\d{1,2})[-\.\/](?P<d>\d{1,2})", text)
+    if iso_match:
+        return datetime(int(iso_match.group("y")), int(iso_match.group("m")), int(iso_match.group("d")))
+
+    md_match = re.search(rf"(?P<m>\d{{1,2}})\s*{K_MONTH}\s*(?P<d>\d{{1,2}})\s*{K_DAY}", text)
+    if md_match:
+        return infer_month_day(now, int(md_match.group("m")), int(md_match.group("d")))
+
+    d_match = re.search(rf"(?P<d>\d{{1,2}})\s*{K_DAY}", text)
+    if d_match:
+        return infer_date(now, int(d_match.group("d")))
+    return None
+
+
+def parse_days_left_query(text: str, now: datetime | None = None) -> str | None:
+    now = now or datetime.now()
+    lowered = text.lower().strip()
+    looks_like_query = (K_HOW_MANY_DAYS in text) or (K_REMAIN in text) or (K_DDAY in lowered)
+    if not looks_like_query:
+        return None
+
+    target = parse_generic_date(text, now)
+    if target is None:
+        return None
+
+    days = (target.date() - now.date()).days
+    if days > 0:
+        return f"{target:%Y-%m-%d}까지 {days}일 남았어요. (D-{days})"
+    if days == 0:
+        return f"{target:%Y-%m-%d} 오늘입니다. (D-Day)"
+    passed = abs(days)
+    return f"{target:%Y-%m-%d} 기준 {passed}일 지났어요. (D+{passed})"
 
 
 def has_explicit_exam_date(text: str) -> bool:
@@ -668,13 +792,25 @@ def handle_ask(text: str, db_path: Path = DB_PATH) -> tuple[str, list[ParsedEven
     is_study_request = (K_STUDY in normalized) or (K_PLAN in normalized)
     has_date_hint = re.search(rf"\d{{1,2}}\s*{K_DAY}", normalized) is not None
     has_time_hint = re.search(rf"\d{{1,2}}\s*{K_HOUR}", normalized) is not None
+    has_explicit_month_day = (
+        re.search(rf"\d{{1,2}}\s*{K_MONTH}\s*\d{{1,2}}\s*{K_DAY}", normalized) is not None
+        or re.search(r"\d{4}[-\.\/]\d{1,2}[-\.\/]\d{1,2}", normalized) is not None
+    )
 
     if is_exam_distribution_request(normalized):
         return ("exam_plan", insert_events(create_exam_countdown_plan(normalized), db_path=db_path))
     if is_study_request:
         return ("study_plan", insert_events(make_study_plan_from_text(normalized), db_path=db_path))
+    if has_explicit_month_day:
+        events = create_events_with_explicit_month_date(normalized)
+        if events:
+            return ("schedule", insert_events(events, db_path=db_path))
     if has_date_hint and has_time_hint:
         return ("schedule", add_events_from_text(normalized, db_path=db_path))
+    if has_date_hint:
+        date_only_event = create_date_only_event(normalized)
+        if date_only_event is not None:
+            return ("schedule", insert_events([date_only_event], db_path=db_path))
     return ("unknown", [])
 
 
@@ -742,6 +878,13 @@ def run_chat_mode() -> None:
         enriched = apply_chat_memory(user_input, memory)
         if enriched != user_input:
             print(f"assistant> (using memory) {enriched}")
+
+        days_left_reply = parse_days_left_query(enriched)
+        if days_left_reply is not None:
+            print(f"assistant> {days_left_reply}")
+            update_chat_memory(memory, enriched)
+            save_chat_memory(memory)
+            continue
 
         kind, events = handle_ask(enriched)
         if not events:
@@ -813,6 +956,11 @@ def main() -> int:
         return 0
 
     if args.command == "ask":
+        days_left_reply = parse_days_left_query(args.text)
+        if days_left_reply is not None:
+            print(days_left_reply)
+            return 0
+
         kind, events = handle_ask(args.text)
         if not events:
             print("Could not understand request. Try schedule/study/exam-plan wording.")
