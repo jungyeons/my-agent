@@ -116,7 +116,7 @@ python assistant.py notify-test
 ## GUI 사용법
 
 ```powershell
-python gui.py
+python webapp.py
 ```
 
 폴더 이동 없이 실행하려면 아래 파일 더블클릭:
@@ -129,15 +129,14 @@ python gui.py
 2. 만든 바로가기를 바탕화면으로 이동
 3. 이후에는 바탕화면 아이콘으로 실행
 
-### GUI 기능 요약
+### Web UI 기능 요약
 
 - 좌측: 채팅 입력/응답, 메모리 상태
-- 우측: `All Events`, `Today`, `Week Calendar` 뷰
+- 우측: `All Events`, `Today`, `Month Calendar` 뷰
 - `All/Today` 표에 `D-day` 컬럼 표시
+- `Edit Selected`로 제목/날짜/시간 직접 수정 가능
 - 일정 우선순위 색상 표시
   - 시험/코테, 면접, 공부 자동 태깅
-- 주간 뷰 스티커
-  - 평일 `✿`, 토요일 `♡`, 일요일 `♥`
 - 테마 전환
   - `Princess`, `Mint`, `Simple`
 - 알림 버튼

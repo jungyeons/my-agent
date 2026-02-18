@@ -15,8 +15,9 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 
-echo [Run] Launching GUI...
+echo [Run] Launching Web UI...
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt >nul 2>nul
-".venv\Scripts\python.exe" gui.py
+start "" "http://127.0.0.1:5842"
+".venv\Scripts\python.exe" webapp.py
 
 endlocal

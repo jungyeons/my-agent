@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>정연의 다이어리</title>
+  <style>
+    :root{
+      --bg:#fff7fb; --panel:#ffffff; --line:#f2c6d8; --text:#5a2b3f; --sub:#8e5e74; --accent:#f5c5d8;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Pretendard, "Malgun Gothic", sans-serif;background:var(--bg);color:var(--text)}
+    .app{max-width:1240px;margin:16px auto;padding:0 12px}
+    .top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .title{font-size:32px;font-weight:800}
+    .chip{background:var(--accent);padding:8px 12px;border:1px solid var(--line);border-radius:10px;font-weight:700}
+    .grid{display:grid;grid-template-columns:380px 1fr;gap:12px;margin-top:10px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1}
+    input,button,select{font:inherit}
+    input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px}
+    button{padding:9px 12px;border:1px solid var(--line);background:var(--accent);color:var(--text);border-radius:10px;font-weight:700;cursor:pointer}
+    button.secondary{background:#fff}
+    .chat{height:220px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;line-height:1.45}
+    .chat .a{color:#6f3d54}.chat .u{color:#355c75}
+    .tabs{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+    .tabs button.active{outline:2px solid #d78eaa}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border-bottom:1px solid #f3d9e4;padding:8px 6px;text-align:left}
+    .table th{color:#7f4f63;font-size:13px}
+    .calendar-nav{display:flex;justify-content:space-between;align-items:center;margin:6px 0 8px}
+    .calendar{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:6px;overflow:auto}
+    .wday{font-weight:700;color:#7f4f63;text-align:center}
+    .cell{min-height:92px;border:1px solid #e2c6d3;border-radius:8px;padding:6px;background:#fff}
+    .cell.today{background:#fde8f0}
+    .day{font-weight:700}
+    .items{font-size:12px;color:#6d3f55;white-space:pre-line;margin-top:4px}
+    .hidden{display:none}
+    .danger{background:#ffe6e6}
+    @media (max-width:1000px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div>
+        <div class="title">정연의 다이어리</div>
+        <div style="color:var(--sub)">자연어 일정 + D-day + 월 달력</div>
+      </div>
+      <div class="row">
+        <div id="notiState" class="chip">Notifier: Off</div>
+        <button id="notiBtn">Start Notifier</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="chat" id="chat"></div>
+        <div class="row" style="margin-top:8px">
+          <input id="input" class="grow" placeholder="예: 4월 9일 파이널 발표 / 4월 9일 발표까지 며칠 남았어?" />
+          <button id="sendBtn">Send</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tabs">
+          <button data-tab="list" class="active">All Events</button>
+          <button data-tab="today">Today</button>
+          <button data-tab="month">Month Calendar</button>
+        </div>
+
+        <div id="tab-list">
+          <table class="table">
+            <thead><tr><th>ID</th><th>Time</th><th>Title</th><th>D-day</th><th>State</th><th></th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <div id="tab-today" class="hidden">
+          <table class="table">
+            <thead><tr><th>ID</th><th>Time</th><th>Title</th><th>D-day</th><th>State</th><th></th></tr></thead>
+            <tbody id="tbodyToday"></tbody>
+          </table>
+        </div>
+
+        <div id="tab-month" class="hidden">
+          <div class="calendar-nav">
+            <button id="prevMonth">&lt;</button>
+            <div id="monthLabel" style="font-weight:800"></div>
+            <button id="nextMonth">&gt;</button>
+          </div>
+          <div id="calendar" class="calendar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="editDlg">
+    <form method="dialog" style="min-width:320px">
+      <h3 style="margin-top:0">일정 수정</h3>
+      <label>Title<input id="eTitle"></label>
+      <label>Date<input id="eDate" placeholder="YYYY-MM-DD"></label>
+      <label>Time<input id="eClock" placeholder="HH:MM"></label>
+      <div class="row" style="justify-content:flex-end;margin-top:10px">
+        <button value="cancel" class="secondary">Cancel</button>
+        <button id="saveEdit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const tbody = document.getElementById('tbody');
+    const tbodyToday = document.getElementById('tbodyToday');
+    const notiBtn = document.getElementById('notiBtn');
+    const notiState = document.getElementById('notiState');
+    const tabs = document.querySelectorAll('.tabs button');
+    let events = [];
+    let monthCursor = new Date();
+    monthCursor.setDate(1);
+    let editId = null;
+
+    function append(role, msg){
+      const div = document.createElement('div');
+      div.className = role === 'assistant' ? 'a' : 'u';
+      div.textContent = `${role}> ${msg}`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function fmtDate(d){ return d.toISOString().slice(0,10); }
+
+    function rowHtml(e){
+      return `<tr>
+        <td>${e.id}</td><td>${e.time_display}</td><td>${e.title}</td><td>${e.dday}</td><td>${e.state}</td>
+        <td class="row">
+          <button onclick="openEdit(${e.id})">Edit</button>
+          <button class="danger" onclick="delEvent(${e.id})">Delete</button>
+        </td>
+      </tr>`;
+    }
+
+    function renderTables(){
+      tbody.innerHTML = events.map(rowHtml).join('');
+      const today = fmtDate(new Date());
+      tbodyToday.innerHTML = events.filter(e=>e.date===today).map(rowHtml).join('');
+    }
+
+    function renderMonth(){
+      const cal = document.getElementById('calendar');
+      const label = document.getElementById('monthLabel');
+      cal.innerHTML = '';
+      const y = monthCursor.getFullYear();
+      const m = monthCursor.getMonth();
+      label.textContent = `${y}-${String(m+1).padStart(2,'0')}`;
+
+      ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(w=>{
+        const d=document.createElement('div'); d.className='wday'; d.textContent=w; cal.appendChild(d);
+      });
+
+      const first = new Date(y,m,1);
+      const firstWd = (first.getDay()+6)%7;
+      const last = new Date(y,m+1,0).getDate();
+      const today = fmtDate(new Date());
+
+      const byDay = {};
+      events.forEach(e=>{
+        if(e.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}-`)){
+          (byDay[e.date] ||= []).push(`${e.clock} ${e.title}`);
+        }
+      });
+
+      for(let i=0;i<42;i++){
+        const cell = document.createElement('div');
+        cell.className='cell';
+        const day = i-firstWd+1;
+        if(day<1 || day>last){ cal.appendChild(cell); continue; }
+        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        if(dateStr===today) cell.classList.add('today');
+        const items = byDay[dateStr] || [];
+        cell.innerHTML = `<div class="day">${day}${items.length?` (${items.length})`:''}</div>
+          <div class="items">${items.slice(0,2).map(x=>`- ${x.length>18?x.slice(0,17)+'…':x}`).join('\n')}${items.length>2?`\n... +${items.length-2}`:''}</div>`;
+        cal.appendChild(cell);
+      }
+    }
+
+    async function fetchEvents(){
+      const res = await fetch('/api/events');
+      const data = await res.json();
+      events = data.events || [];
+      renderTables();
+      renderMonth();
+    }
+
+    async function ask(){
+      const text = input.value.trim();
+      if(!text) return;
+      input.value='';
+      append('you', text);
+      const res = await fetch('/api/ask', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
+      const data = await res.json();
+      if(!res.ok){ append('assistant', data.error || '해석 실패'); return; }
+      if(data.type==='days_left') append('assistant', data.message);
+      else append('assistant', `${data.type} ${data.events.length}개 저장`);
+      await fetchEvents();
+    }
+
+    window.delEvent = async (id)=>{
+      await fetch(`/api/events/${id}`, {method:'DELETE'});
+      await fetchEvents();
+    };
+
+    const dlg = document.getElementById('editDlg');
+    window.openEdit = (id)=>{
+      const e = events.find(x=>x.id===id); if(!e) return;
+      editId = id;
+      document.getElementById('eTitle').value = e.title;
+      document.getElementById('eDate').value = e.date;
+      document.getElementById('eClock').value = e.clock;
+      dlg.showModal();
+    };
+    document.getElementById('saveEdit').addEventListener('click', async (ev)=>{
+      ev.preventDefault();
+      if(editId==null) return;
+      await fetch(`/api/events/${editId}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          title:document.getElementById('eTitle').value,
+          date:document.getElementById('eDate').value,
+          clock:document.getElementById('eClock').value
+        })
+      });
+      dlg.close();
+      await fetchEvents();
+    });
+
+    notiBtn.addEventListener('click', async ()=>{
+      const running = notiBtn.dataset.running === '1';
+      if(running) await fetch('/api/notifier/stop', {method:'POST'});
+      else await fetch('/api/notifier/start', {method:'POST'});
+      await refreshNotifier();
+    });
+
+    async function refreshNotifier(){
+      const res = await fetch('/api/notifier/status');
+      const data = await res.json();
+      const running = !!data.running;
+      notiBtn.dataset.running = running ? '1' : '0';
+      notiBtn.textContent = running ? 'Stop Notifier' : 'Start Notifier';
+      notiState.textContent = `Notifier: ${running?'On':'Off'}`;
+    }
+
+    tabs.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        tabs.forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('tab-list').classList.toggle('hidden', tab!=='list');
+        document.getElementById('tab-today').classList.toggle('hidden', tab!=='today');
+        document.getElementById('tab-month').classList.toggle('hidden', tab!=='month');
+      });
+    });
+
+    document.getElementById('prevMonth').addEventListener('click', ()=>{ monthCursor.setMonth(monthCursor.getMonth()-1); renderMonth(); });
+    document.getElementById('nextMonth').addEventListener('click', ()=>{ monthCursor.setMonth(monthCursor.getMonth()+1); renderMonth(); });
+    sendBtn.addEventListener('click', ask);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') ask(); });
+
+    append('assistant', 'Ready.');
+    fetchEvents();
+    refreshNotifier();
+  </script>
+</body>
+</html>
