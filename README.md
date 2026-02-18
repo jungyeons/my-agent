@@ -125,7 +125,6 @@ python webapp.py
 
 ## 스크린샷
 
-아래 경로에 이미지 파일을 넣으면 README에서 바로 보입니다.
 
 - `docs/screenshots/main.png` : 메인 화면
 - `docs/screenshots/month-calendar.png` : 월 달력 화면
