@@ -159,10 +159,14 @@
     }
     .calendar {
       display: grid;
-      grid-template-columns: repeat(7, minmax(130px, 1fr));
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 6px;
-      overflow: auto;
-      min-width: 940px;
+      width: 100%;
+    }
+    .calendar-wrap {
+      overflow-x: hidden;
+      overflow-y: hidden;
+      padding-bottom: 2px;
     }
     .wday {
       font-weight: 700;
@@ -248,7 +252,7 @@
       .grid { grid-template-columns: 1fr; }
       .illust-wrap { align-items: flex-start; }
       .table { min-width: 640px; }
-      .calendar { min-width: 860px; }
+      .calendar { width: 100%; }
     }
   </style>
 </head>
@@ -338,7 +342,7 @@
             <div id="monthLabel" style="font-weight:800"></div>
             <button id="nextMonth">&gt;</button>
           </div>
-          <div style="overflow:auto">
+          <div class="calendar-wrap">
             <div id="calendar" class="calendar"></div>
           </div>
         </div>
@@ -708,3 +712,8 @@
   </script>
 </body>
 </html>
+
+
+
+
+
