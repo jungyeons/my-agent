@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from assistant import (
     DB_PATH,
@@ -20,6 +21,9 @@ from assistant import (
 
 APP_DIR = Path(__file__).parent
 WEB_DIR = APP_DIR / "web"
+ASSETS_DIR = APP_DIR / "assets"
+USER_ILLUST_PATH = ASSETS_DIR / "user_illustration.png"
+WEB_SETTINGS_PATH = APP_DIR / "web_settings.json"
 
 app = Flask(__name__, static_folder=str(WEB_DIR), static_url_path="/static")
 
@@ -78,6 +82,32 @@ class NotifierState:
 notifier = NotifierState()
 
 
+def load_web_settings() -> dict[str, int]:
+    defaults = {
+        "scale": 100,
+        "offset_x": 0,
+        "offset_y": 0,
+        "width": 260,
+        "height": 96,
+    }
+    if not WEB_SETTINGS_PATH.exists():
+        return defaults
+    try:
+        data = json.loads(WEB_SETTINGS_PATH.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return defaults
+        for k in defaults:
+            if k in data:
+                defaults[k] = int(data[k])
+        return defaults
+    except (OSError, json.JSONDecodeError, ValueError, TypeError):
+        return defaults
+
+
+def save_web_settings(data: dict[str, int]) -> None:
+    WEB_SETTINGS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def dday_label(target: datetime, today: datetime | None = None) -> str:
     today = today or datetime.now()
     diff = (target.date() - today.date()).days
@@ -123,6 +153,53 @@ def root():
 @app.get("/api/events")
 def api_events():
     return jsonify({"events": get_events()})
+
+
+@app.get("/api/illustration/settings")
+def api_illustration_settings_get():
+    return jsonify(load_web_settings())
+
+
+@app.put("/api/illustration/settings")
+def api_illustration_settings_put():
+    body = request.get_json(silent=True) or {}
+    current = load_web_settings()
+    for key in ("scale", "offset_x", "offset_y", "width", "height"):
+        if key in body:
+            try:
+                current[key] = int(body[key])
+            except (ValueError, TypeError):
+                return jsonify({"error": f"invalid {key}"}), 400
+
+    current["scale"] = max(40, min(220, current["scale"]))
+    current["offset_x"] = max(-200, min(200, current["offset_x"]))
+    current["offset_y"] = max(-160, min(160, current["offset_y"]))
+    current["width"] = max(180, min(520, current["width"]))
+    current["height"] = max(80, min(240, current["height"]))
+    save_web_settings(current)
+    return jsonify({"ok": True, "settings": current})
+
+
+@app.post("/api/illustration/upload")
+def api_illustration_upload():
+    if "image" not in request.files:
+        return jsonify({"error": "image file is required"}), 400
+    file = request.files["image"]
+    if not file.filename:
+        return jsonify({"error": "image file is required"}), 400
+    if not file.filename.lower().endswith(".png"):
+        return jsonify({"error": "only PNG is supported"}), 400
+
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    file.save(USER_ILLUST_PATH)
+    return jsonify({"ok": True})
+
+
+@app.get("/api/illustration/image")
+def api_illustration_image():
+    if not USER_ILLUST_PATH.exists():
+        return jsonify({"error": "image not found"}), 404
+    return send_file(USER_ILLUST_PATH, mimetype="image/png")
 
 
 @app.post("/api/ask")

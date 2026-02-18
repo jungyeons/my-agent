@@ -1,185 +1,124 @@
-# Diary Schedule Assistant
-<img width="956" height="503" alt="화면 캡처 2026-02-16 220240" src="https://github.com/user-attachments/assets/27167360-929a-4b56-a8d8-6c27b88b1670" />
+﻿# Diary Schedule Assistant
 
-자연어로 일정을 입력하면 저장/알림/공부계획 자동 생성까지 해주는 로컬 AI 일정 비서입니다.  
-CLI와 GUI를 모두 지원합니다.
+자연어로 일정을 입력하면 등록/수정, D-day 계산, 월 달력 보기, 알림까지 처리하는 개인용 다이어리 플래너입니다.
 
-## 핵심 기능
+## 주요 기능
 
 - 자연어 일정 등록
-  - 예: `20일 9시 면접, 1시 시험`
-- 남은 일수 즉시 계산
-  - 예: `4월 9일 파이널 프로젝트 발표까지 며칠 남았어?`
-- 공부계획 자동 생성
-  - 예: `영어 공부계획 14일, 하루 2시간`
-- 시험일까지 역산 배분
-  - 예: `6월 30일 시험까지 역산 배분, 수학 40 영어 30 국어 30, 하루 4시간`
-- 데스크톱 알림 + (선택) 텔레그램/카카오 알림
-- 대화 메모리 저장/복원 (`chat_memory.json`)
+- 동일 일정 자동 업데이트(중복 등록 방지)
+- D-day 질의 응답
+- 월 달력/오늘 일정/전체 일정 보기
+- 일정 수정/삭제
+- PC 알림(Notifier)
+- 이미지 업로드 + 편집(크기/위치/스케일) + 설정 저장
 
-## 말하는 방법 가이드 (중요)
+## 실행 방법
 
-자연어를 자유롭게 말해도 되지만, 아래 패턴으로 말하면 정확도가 가장 높습니다.
+### 1) 가장 쉬운 실행
 
-### 1) 일정 등록 패턴
+- `launch_gui.bat` 더블클릭
+- 브라우저가 자동으로 열리며 Web UI 실행
 
-- 기본: `N일 N시 일정명`
-- 여러 개: `20일 9시 면접, 1시 시험. 21일 코딩테스트`
-- 오전/오후: `20일 오후 1시 시험`
-
-권장 표현:
-- `20일 9시 면접`
-- `21일 오후 2시 프로젝트 발표`
-
-남은 일수 질문:
-- `4월 9일 발표까지 며칠 남았어?`
-- `2026-04-09까지 몇일 남음?`
-
-### 2) 공부계획 패턴
-
-- `과목 공부계획 N일, 하루 N시간`
-- 예: `영어 공부계획 14일, 하루 2시간`
-
-시간/일수 생략 시:
-- 일수 기본값: 7일
-- 하루 공부시간 기본값: 2시간
-
-### 3) 시험 역산 배분 패턴
-
-- 가중치 방식: `6월 30일 시험까지 역산 배분, 수학 40 영어 30 국어 30, 하루 4시간`
-- 총시간 방식: `2026-07-15 시험까지 배분, 수학 20시간 영어 15시간`
-
-해석 규칙:
-- `수학 40` 같은 숫자는 비중(가중치)
-- `수학 20시간`은 과목별 총 공부시간
-
-### 4) 잘 안 되는 케이스
-
-- 날짜/시간 없이 너무 추상적인 문장
-- 과목/시간 단위가 섞여 모호한 문장
-
-이럴 땐 한 줄에 핵심 3개만 넣으면 정확도가 올라갑니다:
-- `언제(날짜/시간) + 무엇(일정명/과목) + 얼마나(시간/비중)`
-
-## 설치
+### 2) 수동 실행
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-실행 정책 이슈가 있으면(Windows PowerShell):
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
-```
-
-## CLI 사용법
-
-### 1) 한 줄 명령
-
-```powershell
-python assistant.py ask "20일 9시 면접, 1시 시험"
-python assistant.py ask "영어 공부계획 14일, 하루 2시간"
-python assistant.py ask "6월 30일 시험까지 역산 배분, 수학 40 영어 30 국어 30, 하루 4시간"
-```
-
-### 2) 대화형 모드
-
-```powershell
-python assistant.py chat
-```
-
-대화형에서 자주 쓰는 명령:
-- `list`
-- `remove 3`
-- `memory`
-- `memory save`
-- `memory load`
-- `memory reset`
-- `exit`
-
-### 3) 알림 루프 실행
-
-```powershell
-python assistant.py run
-```
-
-### 4) 알림 테스트
-
-```powershell
-python assistant.py notify-test
-```
-
-## GUI 사용법
-
-```powershell
+pip install -r requirements.txt
 python webapp.py
 ```
 
-폴더 이동 없이 실행하려면 아래 파일 더블클릭:
-- `launch_gui.bat`
-- `launch_chat.bat`
-- `launch_notifier.bat`
+브라우저 접속: `http://127.0.0.1:5842`
 
-추천:
-1. `launch_gui.bat` 우클릭 -> `바로 가기 만들기`
-2. 만든 바로가기를 바탕화면으로 이동
-3. 이후에는 바탕화면 아이콘으로 실행
+## 자연어 입력 가이드
 
-### Web UI 기능 요약
+앱 입력창에 아래처럼 입력하면 됩니다.
 
-- 좌측: 채팅 입력/응답, 메모리 상태
-- 우측: `All Events`, `Today`, `Month Calendar` 뷰
-- `All/Today` 표에 `D-day` 컬럼 표시
-- `Edit Selected`로 제목/날짜/시간 직접 수정 가능
-- 일정 우선순위 색상 표시
-  - 시험/코테, 면접, 공부 자동 태깅
-- 테마 전환
-  - `Princess`, `Mint`, `Simple`
-- 알림 버튼
-  - `Start Notifier`, `Stop Notifier`
-- 전체 초기화
-  - `Reset` 시 메모리 + 채팅 + 일정 전체 삭제(확인창)
+### 일정 등록
 
-## 이미지 커스터마이징 (GUI)
+- `2월 20일 9시 면접, 1시 시험`
+- `4월 9일 파이널 프로젝트 발표`
+- `4월9일 오후 1시 파이널 프로젝트 발표`
+
+### D-day 질문
+
+- `4월 9일 파이널 프로젝트 발표까지 며칠 남았어?`
+- `2026-04-09까지 몇일 남았어?`
+
+### 일정 수정/업데이트 동작
+
+같은 날짜 + 같은 제목(공백 차이 포함)으로 다시 입력하면 기존 일정을 업데이트합니다.
+
+예:
+- 먼저: `4월 9일 파이널 프로젝트 발표`
+- 나중에: `4월 9일 오후 1시 파이널 프로젝트 발표`
+- 결과: 같은 일정이 시간만 갱신됨(중복 추가 아님)
+
+## Web UI 사용법
+
+## 탭
+
+- `All Events`: 전체 일정
+- `Today`: 오늘 일정만
+- `Month Calendar`: 월 달력
+
+## 일정 편집
+
+- 목록에서 `Edit` 클릭
+- 제목/날짜/시간 수정 후 저장
+- `Delete`로 삭제
+
+## 알림
+
+- `Start Notifier`: 알림 루프 시작
+- `Stop Notifier`: 알림 루프 중지
+- 일정 시간이 되면 PC 알림 표시
+
+## 이미지 기능 (Use My Image / Edit Image)
+
+### 업로드
 
 1. `Use My Image` 클릭
 2. PNG 파일 선택
-3. `Edit Image` 클릭해서 조정 패널 열기
-4. 아래 항목 조절
-   - `Scale %` (확대/축소)
-   - `Offset X`, `Offset Y` (위치 이동)
-   - `Canvas W/H` + `Apply Size` (표시 영역 크기)
-5. 조절 후 `Done`으로 패널 닫기
 
-참고:
-- 이미지 파일은 `assets/user_illustration.png`로 저장됩니다.
-- 조절값은 `gui_settings.json`에 저장되어 다음 실행에도 유지됩니다.
+### 편집
 
-## 텔레그램/카카오 연동 (선택)
+1. `Edit Image` 클릭
+2. 아래 항목 조절
+   - `Scale %`
+   - `Offset X`
+   - `Offset Y`
+   - `W`, `H` (캔버스 크기)
+3. `Done` 누르면 편집 패널 숨김
 
-### Telegram
+### 저장 방식
 
-```powershell
-$env:TELEGRAM_BOT_TOKEN="123456:ABC..."
-$env:TELEGRAM_CHAT_ID="123456789"
-```
+- 조절값은 자동 저장됩니다.
+- 앱 재실행 후에도 유지됩니다.
 
-### KakaoTalk
+저장 파일:
+- 이미지: `assets/user_illustration.png`
+- 설정: `web_settings.json`
 
-```powershell
-$env:KAKAO_ACCESS_TOKEN="kakao_user_access_token"
-```
+## 바탕화면에서 바로 실행하기
+
+1. `launch_gui.bat` 우클릭
+2. `바로 가기 만들기`
+3. 생성된 바로가기를 바탕화면으로 이동
+4. 이후 바탕화면 아이콘 더블클릭으로 실행
+
+## 아이콘/이름 변경 (선택)
+
+바로가기 우클릭 -> `속성`에서:
+- 이름: 예) `정연의 다이어리`
+- 아이콘 변경: `아이콘 변경` 버튼으로 `.ico` 지정
 
 ## 프로젝트 파일
 
-- `assistant.py`: CLI, 파싱, 계획 생성, 알림/외부 연동
-- `gui.py`: 데스크톱 GUI
-- `requirements.txt`: 의존성
-- `schedule.db`: 일정 DB (런타임 생성)
-- `chat_memory.json`: 대화 메모리 저장 파일 (런타임 생성)
-- `gui_settings.json`: GUI 설정 저장 파일 (런타임 생성)
-
+- `webapp.py`: Flask 서버/API
+- `assistant.py`: 자연어 파싱/일정 로직
+- `web/index.html`: Web UI
+- `launch_gui.bat`: 원클릭 실행
+- `schedule.db`: 일정 DB
+- `assets/user_illustration.png`: 사용자 이미지
+- `web_settings.json`: 이미지 레이아웃 설정
