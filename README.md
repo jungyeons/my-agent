@@ -122,3 +122,21 @@ python webapp.py
 - `schedule.db`: 일정 DB
 - `assets/user_illustration.png`: 사용자 이미지
 - `web_settings.json`: 이미지 레이아웃 설정
+
+## 스크린샷
+
+아래 경로에 이미지 파일을 넣으면 README에서 바로 보입니다.
+
+- `docs/screenshots/main.png` : 메인 화면
+- `docs/screenshots/month-calendar.png` : 월 달력 화면
+- `docs/screenshots/image-edit.png` : 이미지 업로드/편집 화면
+
+![메인 화면](docs/screenshots/main.png)
+![월 달력](docs/screenshots/month-calendar.png)
+![이미지 편집](docs/screenshots/image-edit.png)
+
+### 스크린샷 추가 팁
+
+- 저장 형식: PNG 권장
+- 해상도: 가로 1400px 내외 권장
+- 캡처 후 UI가 잘리지 않게 창을 최대화해서 촬영
