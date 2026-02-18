@@ -184,6 +184,3 @@ $env:KAKAO_ACCESS_TOKEN="kakao_user_access_token"
 - `chat_memory.json`: 대화 메모리 저장 파일 (런타임 생성)
 - `gui_settings.json`: GUI 설정 저장 파일 (런타임 생성)
 
-## 스크린샷 추가 예정
-
-원하면 다음에 네가 주는 이미지를 `docs/` 폴더에 넣고 README에 바로 배치해줄게요.
